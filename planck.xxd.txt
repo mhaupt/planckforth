@@ -1,0 +1,410 @@
+00000000: 7f45 4c46 0101 0100   # planckforth -
+00000008: 0000 0000 0000 0000   # Copyright (C) 2021 nineties
+00000010: 0200 0300 0100 0000   ET_EXEC,EM_386,EV_CURRENT
+00000018: 7480 0408 3400 0000   e_entry=0x08048074,e_phoff=<phdr>
+00000020: 0000 0000 0000 0000   e_shoff,e_flags
+00000028: 3400 2000 0100 0000   e_ehsize,e_phentsize,e_phnum,e_shentsize
+00000030: 0000 0000 0100 0000   e_shnum,e_shstrndx,<phdr>p_type=PT_LOAD
+00000038: 0000 0000 0080 0408   p_offset,p_vaddr=0x08048000
+00000040: 0000 0000 0004 0000   p_paddr,p_filesz
+00000048: 0000 2000 0700 0000   p_memsz(128KB),p_flags=PF_X|PF_W|PF_R
+00000050: 0010 0000             p_align
+
+                                all addresses qqq are prefixed: 0x04088qqq
+
+00000054:           0084 0408   <here> first address after end of all this
+00000058: 3882 0408             <latest> init to dict entry for "V" at 0x238
+0000005c:           0000 0000   <sp0>
+
+                                <interpreter>
+00000060: c080 0408 f080 0408   key find
+00000068: fc80 0408             execute
+0000006c:           d880 0408   branch -16
+00000070: f0ff ffff 
+
+                                ENTRY_POINT
+                                esi is the interpreter's instruction pointer
+
+00000074: be60800408            mov esi, <interpreter>
+00000079: bd00800608            mov ebp, 0x08068000
+0000007e: 89255c800408          mov DWORD PTR ds:<sp0>, esp (save esp)
+                                "next"
+00000084: ad                    lods eax, DWORD PTR ds:[esi] (increments esi)
+00000085: ff20                  jmp DWORD PTR [eax]
+00000087: 00                    (padding)
+
+On the implementation of "next": esi points to the address containing the next
+Forth word to execute. The lods instruction reads from the address esi points
+to and increments esi, i.e., eax will afterwards contain the address of the
+word's implementation pointer in the dictionary. The jump to [eax] will then
+jump to that implementation.
+
+                                DICTIONARY
+                                in which each entry has the following format:
+                                pp8p 0404 - ppp is the previous entry in this
+                                            linked list of entries
+                                01qq      - qq is the character signifying the
+                                            word this entry is about (the 01 is
+                                            actually the length of the name)
+                                rr8r 0408 - rrr is the address of this word's
+                                            implementation
+
+00000088: 0000 0000 0151 0000   Q: quit
+00000090: 4482 0408                     -> 244
+00000094: 8880 0408 0143 0000   C: cell
+0000009c: 4c82 0408                     -> 24c
+000000a0: 9480 0408 0168 0000   h: &here
+000000a8: 5182 0408                     -> 251
+000000ac: a080 0408 016c 0000   l: &latest
+000000b4: 5982 0408                     -> 259
+000000b8: ac80 0408 016b 0000   k: key
+000000c0: 6182 0408                     -> 261
+000000c4: b880 0408 0174 0000   t: type
+000000cc: 7b82 0408                     -> 27b
+000000d0: c480 0408 016a 0000   j: branch
+000000d8: 9182 0408                     -> 291
+000000dc: d080 0408 014a 0000   J: 0branch
+000000e4: 9682 0408                     -> 296
+000000e8: dc80 0408 0166 0000   f: find
+000000f0: 9f82 0408                     -> 29f
+000000f4: e880 0408 0178 0000   x: execute
+000000fc: bf82 0408                     -> 2bf
+00000100: f480 0408 0140 0000   @: fetch
+00000108: c282 0408                     -> 2c2
+0000010c: 0081 0408 0121 0000   !: store
+00000114: c982 0408                     -> 2c9
+00000118: 0c81 0408 013f 0000   ?: cfetch
+00000120: d082 0408                     -> 2d0
+00000124: 1881 0408 0124 0000   $: cstore
+0000012c: d882 0408                     -> 2d8
+00000130: 2481 0408 0164 0000   d: dfetch
+00000138: df82 0408                     -> 2df
+0000013c: 3081 0408 0144 0000   D: dstore
+00000144: e382 0408                     -> 2e3
+00000148: 3c81 0408 0172 0000   r: rfetch
+00000150: e782 0408                     -> 2e7
+00000154: 4881 0408 0152 0000   R: rstore
+0000015c: eb82 0408                     -> 2eb
+00000160: 5481 0408 0169 0000   i: docol
+00000168: fd82 0408                     -> 2fd
+0000016c: 6081 0408 0165 0000   e: exit
+00000174: 0583 0408                     -> 305
+00000178: 6c81 0408 014c 0000   L: lit
+00000180: 0e83 0408                     -> 30e
+00000184: 7881 0408 0153 0000   S: litstring
+0000018c: 1383 0408                     -> 313
+00000190: 8481 0408 012b 0000   +: add
+00000198: 1c83 0408                     -> 31c
+0000019c: 9081 0408 012d 0000   -: sub
+000001a4: 2383 0408                     -> 323
+000001a8: 9c81 0408 012a 0000   *: mul
+000001b0: 2a83 0408                     -> 32a
+000001b4: a881 0408 012f 0000   /: divmod
+000001bc: 3383 0408                     -> 333
+000001c0: b481 0408 0126 0000   &: and
+000001c8: 3e83 0408                     -> 33e
+000001cc: c081 0408 017c 0000   |: or
+000001d4: 4583 0408                     -> 345
+000001d8: cc81 0408 015e 0000   ^: xor
+000001e0: 4c83 0408                     -> 34c
+000001e4: d881 0408 013c 0000   <: less
+000001ec: 5383 0408                     -> 353
+000001f0: e481 0408 0175 0000   u: uless (unsigned less)
+000001f8: 6183 0408                     -> 361
+000001fc: f081 0408 013d 0000   =: equal
+00000204: 6f83 0408                     -> 36f
+00000208: fc81 0408 0128 0000   (: shl
+00000210: 7d83 0408                     -> 37d
+00000214: 0882 0408 0129 0000   ): shr
+0000021c: 8583 0408                     -> 385
+00000220: 1482 0408 0125 0000   %: sar
+00000228: 8d83 0408                     -> 38d
+0000022c: 2082 0408 0176 0000   v: argv
+00000234: 9583 0408                     -> 395
+00000238: 2c82 0408 0156 0000   V: version
+00000240: a483 0408                     -> 3a4
+
+                                IMPLEMENTATIONS
+                                quit
+00000244: 5b                    pop ebx
+00000245: b801000000            mov eax, 0x1 (SYS_EXIT)
+0000024a: cd80                  int 0x80
+
+                                cell
+0000024c: 6a04                  push 0x4
+0000024e: adff20                "next:
+
+                                &here
+00000251: 6854800408            push <here> (0x08048054)
+00000256: adff20                "next"
+
+                                &latest
+00000259: 6858800408            push <latest> (0x08048058)
+0000025e: adff20                "next"
+
+                                key
+00000261: 31c0                  xor eax, eax
+00000263: 50                    push eax
+00000264: ba01000000            mov edx, 0x1
+00000269: 89e1                  mov ecx, esp
+0000026b: 31db                  xor ebx, ebx (STDIN=0)
+0000026d: b803000000            mov eax, 0x3 (SYS_READ)
+00000272: cd80                  int 0x80
+00000274: 85c0                  test eax, eax
+00000276: 76cc                  jbe 0x08048244 (-52, that's quit above)
+00000278: adff20                "next"
+
+                                type
+0000027b: ba01000000            mov edx, 0x1
+00000280: 89e1                  mov ecx, esp
+00000282: 89d3                  mov ebx, edx (STDOUT=1 via edx)
+00000284: b804000000            mov eax, 0x4 (SYS_WRITE)
+00000289: cd80                  int 0x80
+0000028b: 83c404                add esp, 0x4
+0000028e: adff20                "next"
+
+                                branch
+00000291: 0336                  add esi, DWORD PTR [esi]
+00000293: adff20                "next"
+
+                                0branch
+00000296: 58                    pop eax
+00000297: 85c0                  test eax, eax
+00000299: 74f6                  je <branch> (-10: jump to branch implementation)
+0000029b: ad                    lods eax, DWORD PTR ds:[esi] (needed to
+                                increment esi to skip the branch offset)
+0000029c: adff20                "next"
+
+                                find
+0000029f: 8a2424                mov ah, BYTE PTR [esp]
+000002a2: b001                  mov al, 0x1
+000002a4: 8b0d58800408          mov ecx, DWORD PTR ds:<latest> (0x08048058)
+000002aa: 8b5904                <L1> mov ebx, DWORD PTR [ecx+0x4]
+000002ad: 6639c3                cmp bx, ax
+000002b0: 7404                  je <L2>
+000002b2: 8b09                  mov ecx, DWORD PTR [ecx]
+000002b4: ebf4                  jmp <L1>
+000002b6: 83c108                <L2> add ecx, 0x8
+000002b9: 890c24                mov DWORD PTR [esp], ecx
+000002bc: adff20                "next"
+
+                                execute
+000002bf: 58                    pop eax
+000002c0: ff20                  jmp DWORD PTR [eax] (no "next")
+
+                                fetch
+000002c2: 58                    pop eax
+000002c3: 8b00                  mov eax, DWORD PTR [eax]
+000002c5: 50                    push eax
+000002c6: adff20                "next"
+
+                                store
+000002c9: 58                    pop eax
+000002ca: 5b                    pop ebx
+000002cb: 8918                  mov DWORD PTR [eax], ebx
+000002cd: adff20                "next"
+
+                                cfetch
+000002d0: 58                    pop eax
+000002d1: 0fbe00                movsx eax, BYTE PTR [eax]
+000002d4: 50                    push eax
+000002d5: adff20                "next"
+
+                                cstore
+000002d8: 58                    pop eax
+000002d9: 5b                    pop ebx
+000002da: 8818                  mov BYTE PTR [eax], bl
+000002dc: adff20                "next"
+
+                                dfetch
+000002df: 54                    push esp
+000002e0: adff20                "next"
+
+                                dstore
+000002e3: 5c                    pop esp
+000002e4: adff20                "next"
+
+                                rfetch
+000002e7: 55                    push ebp
+000002e8: adff20                "next"
+
+                                rstore
+000002eb: 5d                    pop ebp
+000002ec: adff20                "next"
+
+000002ef: 8d6dfc                <docol> lea ebp, [ebp-0x4] (decrement ebp by 4)
+000002f2: 897500                mov DWPRD PTR [ebp+0x0], esi (save esi)
+000002f5: 83c004                add eax, 0x4 (eax is next address now)
+000002f8: 89c6                  mov esi, eax (point the interpreter to it)
+000002fa: adff20                "next"
+
+                                docol
+000002fd: 68ef820408            push <docol> (0x080482ef)
+00000302: adff20                "next"
+
+The implementation of docol above is worth a bit of an explanation.
+
+In a nutshell, docol and exit are important for the implementation of subroutine
+calls in the basic interpreter. Normally, execution works just by way of always
+using the "next" instruction, which reliably reads from the address esi points
+to and jumps to that content. As long as "primitive" words are the only ones
+involved, this isn't a problem, because it's just indirectly threaded assembler
+routines, one after the next. Once new words are involved that are composed of
+primitive routines (or other words), we need an interpreter call stack.  The ebp
+register, initially pointing to 0x08068000, references the top of the
+interpreter call stack.
+
+The docol implementation alone doesn't do much. It just places the address of
+the <docol> routine on the data stack.
+
+If the <docol> routine is stored in some word definition, it will eventually be
+encountered by the interpreter. When that happens, the interpreter will
+decrement ebp, and save the current interpreter code pointer (esi) on the ebp
+interpreter call stack. Because eax, thanks to how "next" is implemented,
+contains the pointer to the place where the <docol> address is stored in the
+word definition, after the increment by 4, eax will now contain the address of
+the next pointer to a word dictionary entry (its implementation pointer).
+
+IOW, the <docol> routine is that little bit of primitive at the beginning of a
+Forth word definition that will save the return address and hand execution back
+to the interpreter.
+
+This also means that every (!) word has a primitive as the first instruction.
+That's neat, because that way, there is no difference between a word that just
+points to a primitive implementation and a word that actually is defined in
+terms of other words. The first is always a primitive - either the primitive
+implementation itself, or <docol> to set up the stack frame.
+
+                                exit
+00000305: 8b7500                mov esi, DWORD PTR [ebp+0x0]
+00000308: 8d6d04                lea ebp, [ebp+0x4]
+0000030b: adff20                "next"
+
+                                lit
+                                (read the next thing from the interpreter stream
+                                as a literal, not as an instruction, and place
+                                it on the stack)
+0000030e: ad                    lods eax, DWORD PTR ds:[esi]
+0000030f: 50                    push eax
+00000310: adff20                "next"
+
+                                litstring
+00000313: ad                    lods eax, DWORD PTR ds:[esi]
+00000314: 56                    push esi
+00000315: 01c6                  add esi, eax
+00000317: adff20                "next"
+
+0000031a: 0000                  (padding)
+
+                                add
+0000031c: 58                    pop eax
+0000031d: 010424                add DWORD PTR [esp], eax
+00000320: adff20                "next"
+
+                                sub
+00000323: 58                    pop eax
+00000324: 290424                sub DWORD PTR [esp], eax
+00000327: adff20                "next"
+
+                                mul
+0000032a: 58                    pop eax
+0000032b: 5b                    pop ebx
+0000032c: 0fafc3                imul eax, ebx
+0000032f: 50                    push eax
+00000330: adff20                "next"
+
+                                divmod
+00000333: 31d2                  xor edx, edx
+00000335: 5b                    pop ebx
+00000336: 58                    pop eax
+00000337: f7fb                  idiv ebx
+00000339: 52                    push edx
+0000033a: 50                    push eax
+0000033b: adff20                "next"
+
+                                and
+0000033e: 58                    pop eax
+0000033f: 210424                and DWORD PTR [esp], eax
+00000342: adff20                "next"
+
+                                or
+00000345: 58                    pop eax
+00000346: 090424                or DWORD PTR [esp], eax
+00000349: adff20                "next"
+
+                                xor
+0000034c: 58                    pop eax
+0000034d: 310424                xor DWORD PTR [esp], eax
+00000350: adff20                "next"
+
+                                less
+00000353: 58                    pop eax
+00000354: 5b                    pop ebx
+00000355: 39c3                  cmp ebx, eax
+00000357: 0f9cc0                setl al
+0000035a: 0fb6c0                movzx eax, al
+0000035d: 50                    push eax
+0000035e: adff20                "next"
+
+                                uless
+00000361: 58                    pop eax
+00000362: 5b                    pop ebx
+00000363: 39c3                  cmp ebx, eax
+00000365: 0f92c0                setb al
+00000368: 0fb6c0                movzx eax, al
+0000036b: 50                    push eax
+0000036c: adff20                "next"
+
+                                equal
+0000036f: 58                    pop eax
+00000370: 5b                    pop ebx
+00000371: 39c3                  cmp ebx, eax
+00000373: 0f94c0                sete al
+00000376: 0fb6c0                movzx eax, al
+00000379: 50                    push eax
+0000037a: adff20                "next"
+
+                                shl
+0000037d: 59                    pop ecx
+0000037e: 58                    pop eax
+0000037f: d3e0                  shl eax, cl
+00000381: 50                    push eax
+00000382: adff20                "next"
+
+                                shr
+00000385: 59                    pop ecx
+00000386: 58                    pop eax
+00000387: d3e8                  shr eax, cl
+00000389: 50                    push eax
+0000038a: adff20                "next"
+
+                                sar
+0000038d: 59                    pop ecx
+0000038e: 58                    pop eax
+0000038f: d3f8                  sar eax, cl
+00000391: 50                    push eax
+00000392: adff20                "next"
+
+                                argv
+00000395: 8b055c800408          mov eax, DWORD PTR ds:<sp0> (0x0804805c)
+0000039b: 8d5804                lea ebx, [eax+0x4]
+0000039e: 53                    push ebx
+0000039f: ff30                  push DWORD PTR [eax]
+000003a1: adff20                "next"
+
+                                version
+000003a4: 68b0830408            push <version> (0x080483b0)
+000003a9: adff20                "next"
+
+000003ac: 0000 0000             (padding)
+
+000003b0: 6933 3836 2d6c 696e   <version> i386-lin
+000003b8: 7578 2d68 616e 6477   ux-handw
+000003c0: 7269 7474 656e 3a43   ritten:C
+000003c8: 6f70 7972 6967 6874   opyright
+000003d0: 2028 6329 2032 3032    (c) 202
+000003d8: 3120 4b6f 6963 6869   1 Koichi
+000003e0: 204e 616b 616d 7572    Nakamur
+000003e8: 6120 3c6b 6f69 6368   a <koich
+000003f0: 6940 6964 6569 6e2e   i@idein.
+000003f8: 6a70 3e00 0000 0000   jp>
